@@ -1,5 +1,10 @@
 #ifndef ALL_TCP_H
 #define ALL_TCP_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 
@@ -39,5 +44,9 @@ err_t all_tcp_init(struct all_tcp_handler* handler);
 void all_tcp_close(struct all_tcp_pcb* pcb);
 void all_tcp_send(struct all_tcp_pcb* pcb);
 void all_tcp_send_buf(struct all_tcp_pcb* pcb, struct pbuf* buf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

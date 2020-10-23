@@ -1,6 +1,10 @@
 #ifndef NETIF_H
 #define NETIF_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "lwip/ip.h"
 
 typedef void (*netif_handler_init_fn)(void* user, struct netif* netif);
@@ -20,5 +24,9 @@ struct netif_handler {
 void netif_default_init(struct netif_handler* handler);
 void netif_default_poll();
 void netif_default_free();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
