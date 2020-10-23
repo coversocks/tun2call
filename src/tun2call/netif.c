@@ -119,6 +119,15 @@ static void netif_default_link_callback(struct netif* netif) {
   }
 }
 
+void netif_handler_set(struct netif_handler* handler,
+                       u32_t ipaddr,
+                       u32_t netmask,
+                       u32_t gw) {
+  handler->ipaddr.addr = PP_HTONL(ipaddr);
+  handler->netmask.addr = PP_HTONL(netmask);
+  handler->gw.addr = PP_HTONL(gw);
+}
+
 /* This function initializes all network interfaces */
 void netif_default_init(struct netif_handler* handler) {
   printf("Starting lwIP, local interface IP is %s\n",

@@ -20,7 +20,10 @@ struct netif_handler {
   netif_handler_read_fn read;
   netif_handler_write_fn write;
 };
-
+void netif_handler_set(struct netif_handler* handler,
+                       u32_t ipaddr,
+                       u32_t netmask,
+                       u32_t gw);
 void netif_default_init(struct netif_handler* handler);
 void netif_default_poll();
 void netif_default_free();
