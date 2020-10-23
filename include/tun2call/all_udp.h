@@ -11,12 +11,12 @@ extern "C" {
 
 struct all_udp_handler;
 
-typedef void (*all_udp_handler_recv_fn)(struct all_udp_handler* conn,
+typedef void (*all_udp_handler_recv_fn)(struct all_udp_handler* handler,
                                         struct udp_pcb* pcb,
                                         const ip_addr_t* remote_addr,
                                         u16_t remote_port,
                                         struct pbuf* p);
-typedef void (*all_udp_handler_poll_fn)(struct all_udp_handler* conn,
+typedef void (*all_udp_handler_poll_fn)(struct all_udp_handler* handler,
                                         struct udp_pcb* pcb);
 struct all_udp_handler {
   struct udp_pcb* listener;
