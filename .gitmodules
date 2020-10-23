@@ -1,0 +1,6 @@
+[submodule "lwip"]
+	path = lwip
+	url = https://github.com/coversocks/lwip.git
+[submodule "dns"]
+	path = dns
+	url = https://github.com/coversocks/dns.git
