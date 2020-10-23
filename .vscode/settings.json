@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "opt.h": "c",
+        "complex": "c",
+        "istream": "c",
+        "random": "c",
+        "locale": "c",
+        "string": "c"
+    },
+    "cSpell.words": [
+        "CMAKE",
+        "SRCS",
+        "lwip",
+        "netif",
+        "recved",
+        "tapif"
+    ]
+}
