@@ -55,7 +55,6 @@
 #include "lwip/timeouts.h"
 #include "netif/etharp.h"
 
-#include "lwipcfg.h"
 #include "netif.h"
 #include "tapif.h"
 
@@ -101,17 +100,17 @@
 
 /*-----------------------------------------------------------------------------------*/
 void tapif_raw_init(void* user, struct netif* netif) {
-  struct tapif* tapif;
+  int* tapif;
 #if LWIP_IPV4
   int ret;
   char buf[1024];
 #endif /* LWIP_IPV4 */
   char* preconfigured_tapif = getenv("PRECONFIGURED_TAPIF");
   struct netif_handler* handler = (struct netif_handler*)netif->state;
-  tapif = (struct tapif*)mem_malloc(sizeof(struct tapif));
-  tapif->fd = open(DEVTAP, O_RDWR);
+  tapif = (int*)mem_malloc(sizeof(int));
+  *tapif = open(DEVTAP, O_RDWR);
   LWIP_DEBUGF(TAPIF_DEBUG, ("tapif_init: fd %d\n", tapif->fd));
-  if (tapif->fd == -1) {
+  if (*tapif == -1) {
 #ifdef LWIP_UNIX_LINUX
     perror(
         "tapif_init: try running \"modprobe tun\" or rebuilding your kernel "
@@ -135,7 +134,7 @@ void tapif_raw_init(void* user, struct netif* netif) {
     ifr.ifr_name[sizeof(ifr.ifr_name) - 1] = 0; /* ensure \0 termination */
 
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-    if (ioctl(tapif->fd, TUNSETIFF, (void*)&ifr) < 0) {
+    if (ioctl(*tapif, TUNSETIFF, (void*)&ifr) < 0) {
       perror("tapif_init: " DEVTAP " ioctl TUNSETIFF");
       exit(1);
     }
@@ -173,14 +172,14 @@ void tapif_raw_init(void* user, struct netif* netif) {
 }
 
 ssize_t tapif_raw_write(void* user, char* buf, u16_t len) {
-  struct tapif* tapif = (struct tapif*)user;
-  return write(tapif->fd, buf, len);
+  int* tapif = user;
+  return write(*tapif, buf, len);
 }
 
 static char tapif_buf[1518];
 
 ssize_t tapif_raw_read(void* user, char** buf) {
   *buf = tapif_buf;
-  struct tapif* tapif = (struct tapif*)user;
-  return read(tapif->fd, tapif_buf, sizeof(tapif_buf));
+  int* tapif = user;
+  return read(*tapif, tapif_buf, sizeof(tapif_buf));
 }

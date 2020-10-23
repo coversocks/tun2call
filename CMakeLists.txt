@@ -12,25 +12,31 @@ endif ()
 add_subdirectory(lwip)
 add_subdirectory(dns)
 
-set (LWIP_INCLUDE_DIRS
+set (tun2call_INCLUDE_DIRS
     "${LWIP_DIR}/src/include"
     "${LWIP_DIR}/contrib"
     "${LWIP_DIR}/contrib/ports/unix/port/include"
     "${LWIP_DIR}/contrib/examples/example_app"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/tun2call"
 )
-
 set(tun2call_SRCS
-    ${CMAKE_SOURCE_DIR}/src/netif.c
-    ${CMAKE_SOURCE_DIR}/src/all_udp.c
-    ${CMAKE_SOURCE_DIR}/src/all_tcp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tun2call/netif.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tun2call/all_udp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tun2call/all_tcp.c
 )
-add_library(tun2call EXCLUDE_FROM_ALL ${tun2call_SRCS})
-target_include_directories(tun2call PRIVATE ${LWIP_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/src/)
+add_library(tun2call ${tun2call_SRCS})
+target_include_directories(tun2call PRIVATE ${tun2call_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+install(TARGETS tun2call DESTINATION lib)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/tun2call DESTINATION include)
 
-set(tun2echo_SRCS
-    ${CMAKE_SOURCE_DIR}/src/test.c
-    ${CMAKE_SOURCE_DIR}/src/tapif.c
+set (tun2echo_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/test"
 )
-add_executable(tun2conn_test EXCLUDE_FROM_ALL ${tun2echo_SRCS})
-target_include_directories(tun2echo PRIVATE ${LWIP_INCLUDE_DIRS})
-target_link_libraries(tun2echo tun2call lwipcore lwipcontribportunix lwipcore tun2call)
+set(tun2echo_SRCS
+    ${CMAKE_SOURCE_DIR}/src/test/test.c
+    ${CMAKE_SOURCE_DIR}/src/test/tapif.c
+)
+add_executable(tun2echo ${tun2echo_SRCS})
+target_include_directories(tun2echo PRIVATE ${tun2call_INCLUDE_DIRS} ${tun2echo_INCLUDE_DIRS})
+target_link_libraries(tun2echo tun2call lwipcore lwipcontribportunix lwipcore)

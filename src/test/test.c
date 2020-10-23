@@ -31,8 +31,9 @@
 #include "netif.h"
 #include "tapif.h"
 
-/* include the port-dependent configuration */
-#include "lwipcfg.h"
+#define LWIP_PORT_INIT_IPADDR(addr)   IP4_ADDR((addr), 192,168,1,200)
+#define LWIP_PORT_INIT_GW(addr)       IP4_ADDR((addr), 192,168,1,1)
+#define LWIP_PORT_INIT_NETMASK(addr)  IP4_ADDR((addr), 255,255,255,0)
 
 static struct netif_handler netif;
 static struct all_tcp_handler tcp_all;
