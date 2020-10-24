@@ -19,8 +19,11 @@ struct netif_handler {
   ip4_addr_t netmask;
   ip4_addr_t gw;
   char *rbuf;
+  u16_t rbuf_size;
+  u16_t rbuf_cap;
   char *wbuf;
   u16_t wbuf_size;
+  u16_t wbuf_cap;
   netif_handler_init_fn init;
   netif_handler_read_fn read;
   netif_handler_write_fn write;

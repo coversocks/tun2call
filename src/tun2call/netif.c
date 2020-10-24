@@ -24,7 +24,7 @@
 
 static err_t netif_default_output(struct netif* netif, struct pbuf* p) {
   struct netif_handler* handler = (struct netif_handler*)netif->state;
-  if (p->tot_len > sizeof(handler->wbuf)) {
+  if (p->tot_len > handler->wbuf_cap) {
     MIB2_STATS_NETIF_INC(netif, ifoutdiscards);
     perror("netif_default_output: packet too large");
     return ERR_IF;
@@ -47,7 +47,7 @@ static err_t netif_default_output(struct netif* netif, struct pbuf* p) {
 static struct pbuf* netif_default_read(struct netif* netif) {
   struct netif_handler* handler = (struct netif_handler*)netif->state;
   ssize_t readlen = handler->read(handler);
-  if (readlen < 0) {
+  if (readlen < 1) {
     return 0;
   }
   u16_t len = (u16_t)readlen;

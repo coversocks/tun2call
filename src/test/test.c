@@ -26,9 +26,9 @@
 #include "netif/ethernet.h"
 
 /* applications includes */
-#include "all_tcp.h"
-#include "all_udp.h"
-#include "netif.h"
+#include "tun2call/all_tcp.h"
+#include "tun2call/all_udp.h"
+#include "tun2call/netif.h"
 #include "tapif.h"
 
 #define LWIP_PORT_INIT_IPADDR(addr)   IP4_ADDR((addr), 192,168,1,200)
@@ -92,6 +92,12 @@ static void test_init(void* arg) { /* remove compiler warning */
   LWIP_PORT_INIT_GW(&netif.gw);
   LWIP_PORT_INIT_IPADDR(&netif.ipaddr);
   LWIP_PORT_INIT_NETMASK(&netif.netmask);
+  netif.wbuf= malloc(1518);
+  netif.wbuf_size=0;
+  netif.wbuf_cap=1518;
+  netif.rbuf= malloc(1518);
+  netif.rbuf_size=0;
+  netif.rbuf_cap=1518;
   netif.init = tapif_raw_init;
   netif.read = tapif_raw_read;
   netif.write = tapif_raw_write;

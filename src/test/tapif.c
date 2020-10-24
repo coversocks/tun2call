@@ -55,7 +55,7 @@
 #include "lwip/timeouts.h"
 #include "netif/etharp.h"
 
-#include "netif.h"
+#include "tun2call/netif.h"
 #include "tapif.h"
 
 #define IFCONFIG_BIN "/sbin/ifconfig "
@@ -99,14 +99,13 @@
 #endif
 
 /*-----------------------------------------------------------------------------------*/
-void tapif_raw_init(void* user, struct netif* netif) {
+void tapif_raw_init(struct netif_handler* handler, struct netif* netif) {
   int* tapif;
 #if LWIP_IPV4
   int ret;
   char buf[1024];
 #endif /* LWIP_IPV4 */
   char* preconfigured_tapif = getenv("PRECONFIGURED_TAPIF");
-  struct netif_handler* handler = (struct netif_handler*)netif->state;
   tapif = (int*)mem_malloc(sizeof(int));
   *tapif = open(DEVTAP, O_RDWR);
   LWIP_DEBUGF(TAPIF_DEBUG, ("tapif_init: fd %d\n", tapif->fd));
@@ -171,15 +170,19 @@ void tapif_raw_init(void* user, struct netif* netif) {
   }
 }
 
-ssize_t tapif_raw_write(void* user, char* buf, u16_t len) {
-  int* tapif = user;
-  return write(*tapif, buf, len);
+ssize_t tapif_raw_write(struct netif_handler* handler) {
+  int* tapif = handler->user;
+  ssize_t n = write(*tapif, handler->wbuf, handler->wbuf_size);
+  return n;
 }
 
-static char tapif_buf[1518];
-
-ssize_t tapif_raw_read(void* user, char** buf) {
-  *buf = tapif_buf;
-  int* tapif = user;
-  return read(*tapif, tapif_buf, sizeof(tapif_buf));
+ssize_t tapif_raw_read(struct netif_handler* handler) {
+  int* tapif = handler->user;
+  ssize_t n = read(*tapif, handler->rbuf, handler->rbuf_cap);
+  if(n>=0){
+    handler->rbuf_size=n;
+  }else{
+    handler->rbuf_size=0;
+  }
+  return n;
 }
