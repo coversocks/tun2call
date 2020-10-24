@@ -24,16 +24,16 @@
 
 static err_t netif_default_output(struct netif* netif, struct pbuf* p) {
   struct netif_handler* handler = (struct netif_handler*)netif->state;
-  char buf[1518]; /* max packet size including VLAN excluding CRC */
-  if (p->tot_len > sizeof(buf)) {
+  if (p->tot_len > sizeof(handler->wbuf)) {
     MIB2_STATS_NETIF_INC(netif, ifoutdiscards);
     perror("netif_default_output: packet too large");
     return ERR_IF;
   }
   /* initiate transfer(); */
-  pbuf_copy_partial(p, buf, p->tot_len, 0);
+  pbuf_copy_partial(p, handler->wbuf, p->tot_len, 0);
+  handler->wbuf_size=p->tot_len;
   /* signal that packet should be sent(); */
-  ssize_t written = handler->write(handler->user, buf, p->tot_len);
+  ssize_t written = handler->write(handler);
   if (written < p->tot_len) {
     MIB2_STATS_NETIF_INC(netif, ifoutdiscards);
     perror("netif_default_output: write");
@@ -46,8 +46,7 @@ static err_t netif_default_output(struct netif* netif, struct pbuf* p) {
 
 static struct pbuf* netif_default_read(struct netif* netif) {
   struct netif_handler* handler = (struct netif_handler*)netif->state;
-  char* buf; /* max packet size including VLAN excluding CRC */
-  ssize_t readlen = handler->read(handler->user, &buf);
+  ssize_t readlen = handler->read(handler);
   if (readlen < 0) {
     return 0;
   }
@@ -56,7 +55,7 @@ static struct pbuf* netif_default_read(struct netif* netif) {
   /* We allocate a pbuf chain of pbufs from the pool. */
   struct pbuf* p = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
   if (p != NULL) {
-    pbuf_take(p, buf, len);
+    pbuf_take(p, handler->rbuf, len);
     /* acknowledge that packet has been read(); */
   } else {
     /* drop packet(); */
@@ -94,7 +93,7 @@ static err_t netif_default_low_init(struct netif* netif) {
   /* device capabilities */
   netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
   struct netif_handler* handler = netif->state;
-  handler->init(handler->user, netif);
+  handler->init(handler, netif);
   netif_set_link_up(netif);
   return ERR_OK;
 }
@@ -153,4 +152,11 @@ void netif_default_poll() {
 
 void netif_default_free() {
   netif_set_down(&netif_);
+}
+
+void lwip_platform_assert(const char *msg, int line, const char *file)
+{
+  printf("Assertion \"%s\" failed at line %d in %s\n", msg, line, file);
+  fflush(NULL);
+  abort();
 }

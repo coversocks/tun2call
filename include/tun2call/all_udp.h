@@ -19,6 +19,7 @@ typedef void (*all_udp_handler_recv_fn)(struct all_udp_handler* handler,
 typedef void (*all_udp_handler_poll_fn)(struct all_udp_handler* handler,
                                         struct udp_pcb* pcb);
 struct all_udp_handler {
+  void *user;
   struct udp_pcb* listener;
   all_udp_handler_recv_fn recv;
   all_udp_handler_poll_fn poll;

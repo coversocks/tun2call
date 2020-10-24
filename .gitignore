@@ -1,2 +1,7 @@
 build
 osx
+armeabi-v7a
+armeabi-v7a with NEON
+arm64-v8a
+x86
+x86_64

@@ -33,6 +33,7 @@ typedef void (*all_tcp_accept_fn)(struct all_tcp_handler* handler,
                                   struct all_tcp_pcb* pcb);
 
 struct all_tcp_handler {
+  void *user;
   struct tcp_pcb* listener;
   all_tcp_accept_fn accept;
   all_tcp_recv_fn recv;

@@ -6,16 +6,21 @@ extern "C" {
 #endif
 
 #include "lwip/ip.h"
+#include "lwip/pbuf.h"
 
-typedef void (*netif_handler_init_fn)(void* user, struct netif* netif);
-typedef ssize_t (*netif_handler_read_fn)(void* user, char** buf);
-typedef ssize_t (*netif_handler_write_fn)(void* user, char* buf, u16_t len);
+struct netif_handler;
+typedef void (*netif_handler_init_fn)(struct netif_handler* handler, struct netif* netif);
+typedef ssize_t (*netif_handler_read_fn)(struct netif_handler* handler);
+typedef ssize_t (*netif_handler_write_fn)(struct netif_handler* handler);
 
 struct netif_handler {
   void* user;
   ip4_addr_t ipaddr;
   ip4_addr_t netmask;
   ip4_addr_t gw;
+  char *rbuf;
+  char *wbuf;
+  u16_t wbuf_size;
   netif_handler_init_fn init;
   netif_handler_read_fn read;
   netif_handler_write_fn write;

@@ -14,5 +14,10 @@
         "netif",
         "recved",
         "tapif"
-    ]
+    ],
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": true,
+        "strings": false
+    }
 }
