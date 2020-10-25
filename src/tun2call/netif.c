@@ -22,11 +22,25 @@
 #include "netif/etharp.h"
 #include "netif/ethernet.h"
 
+#if __ANDROID__
+
+#include <android/log.h>
+#define  LOG_TAG    "coversocks"
+#define  LOG_DEBUG(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define  LOG_ERROR(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+#else
+
+#define  LOG_DEBUG(...)  printf(__VA_ARGS__)
+#define  LOG_ERROR(...)  perror(__VA_ARGS__)
+
+#endif
+
 static err_t netif_default_output(struct netif* netif, struct pbuf* p) {
   struct netif_handler* handler = (struct netif_handler*)netif->state;
   if (p->tot_len > handler->wbuf_cap) {
     MIB2_STATS_NETIF_INC(netif, ifoutdiscards);
-    perror("netif_default_output: packet too large");
+    LOG_ERROR("netif_default_output: packet too large");
     return ERR_IF;
   }
   /* initiate transfer(); */
@@ -36,7 +50,7 @@ static err_t netif_default_output(struct netif* netif, struct pbuf* p) {
   ssize_t written = handler->write(handler);
   if (written < p->tot_len) {
     MIB2_STATS_NETIF_INC(netif, ifoutdiscards);
-    perror("netif_default_output: write");
+    LOG_ERROR("netif_default_output: write");
     return ERR_IF;
   } else {
     MIB2_STATS_NETIF_ADD(netif, ifoutoctets, (u32_t)written);
@@ -60,7 +74,7 @@ static struct pbuf* netif_default_read(struct netif* netif) {
   } else {
     /* drop packet(); */
     MIB2_STATS_NETIF_INC(netif, ifindiscards);
-    perror("netif_default_input: could not allocate pbuf\n");
+    LOG_ERROR("netif_default_input: could not allocate pbuf by %d\n", len);
   }
   return p;
 }
@@ -79,8 +93,8 @@ static err_t netif_default_low_init(struct netif* netif) {
   MIB2_INIT_NETIF(netif, snmp_ifType_other, 100000000);
   netif->name[0] = 't';
   netif->name[1] = 'p';
-  netif->output = etharp_output;
-  netif->output_ip6 = ethip6_output;
+  netif->output = netif_default_output;
+  netif->output_ip6 = netif_default_output;
   netif->linkoutput = netif_default_output;
   netif->mtu = 1500;
   netif->hwaddr[0] = 0x02;
@@ -98,23 +112,23 @@ static err_t netif_default_low_init(struct netif* netif) {
   return ERR_OK;
 }
 
-static struct netif netif_;
+static struct netif *default_=0;
 
 /* globales variables for netifs */
 static void netif_default_status_callback(struct netif* netif) {
   if (netif_is_up(netif)) {
-    printf("Starting lwIP, status is UP, local interface IP is %s\n",
+    LOG_DEBUG("Starting lwIP, status is UP, local interface IP is %s\n",
            ip4addr_ntoa(netif_ip4_addr(netif)));
   } else {
-    printf("Starting lwIP, status is DOWN\n");
+    LOG_DEBUG("Starting lwIP, status is DOWN\n");
   }
 }
 
 static void netif_default_link_callback(struct netif* netif) {
   if (netif_is_link_up(netif)) {
-    printf("Starting lwIP, link is UP\n");
+    LOG_DEBUG("Starting lwIP, link is UP\n");
   } else {
-    printf("Starting lwIP, link is DOWN\n");
+    LOG_DEBUG("Starting lwIP, link is DOWN\n");
   }
 }
 
@@ -129,34 +143,40 @@ void netif_handler_set(struct netif_handler* handler,
 
 /* This function initializes all network interfaces */
 void netif_default_init(struct netif_handler* handler) {
-  printf("Starting lwIP, local interface IP is %s\n",
+  LOG_DEBUG("Starting lwIP, local interface IP is %s\n",
          ip4addr_ntoa(&handler->ipaddr));
-  netif_add(&netif_, &handler->ipaddr, &handler->netmask, &handler->gw, handler,
+  default_=malloc(sizeof(struct netif));
+  netif_add(default_, &handler->ipaddr, &handler->netmask, &handler->gw, handler,
             netif_default_low_init, netif_input);
-  netif_set_default(&netif_);
-  netif_create_ip6_linklocal_address(&netif_, 1);
-  printf("Starting lwIP, ip6 linklocal address is %s\n",
-         ip6addr_ntoa(netif_ip6_addr(&netif_, 0)));
-  netif_set_status_callback(&netif_, netif_default_status_callback);
-  netif_set_link_callback(&netif_, netif_default_link_callback);
-  netif_set_up(&netif_);
+  if(handler->enable_ipv6){
+    netif_create_ip6_linklocal_address(default_, 1);
+    printf("Starting lwIP, ip6 linklocal address is %s\n",
+        ip6addr_ntoa(netif_ip6_addr(default_, 0)));
+  }
+  netif_set_status_callback(default_, netif_default_status_callback);
+  netif_set_link_callback(default_, netif_default_link_callback);
+  netif_set_default(default_);
+  netif_set_up(default_);
 }
 
 void netif_default_poll() {
   /* handle timers (already done in tcpip.c when NO_SYS=0) */
   sys_check_timeouts();
-  netif_default_input(&netif_);
+  netif_default_input(default_);
   /* check for loopback packets on all netifs */
   netif_poll_all();
 }
 
 void netif_default_free() {
-  netif_set_down(&netif_);
+  netif_set_down(default_);
+  netif_remove(default_);
+  free(default_);
+  default_=0;
 }
 
 void lwip_platform_assert(const char *msg, int line, const char *file)
 {
-  printf("Assertion \"%s\" failed at line %d in %s\n", msg, line, file);
+  LOG_ERROR("Assertion \"%s\" failed at line %d in %s\n", msg, line, file);
   fflush(NULL);
   abort();
 }

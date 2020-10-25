@@ -19,7 +19,21 @@
 #include "lwip/udp.h"
 #include "netif/ethernet.h"
 
-static void all_tcp_free(struct all_tcp_pcb* es) {
+#if __ANDROID__
+
+#include <android/log.h>
+#define  LOG_TAG    "coversocks"
+#define  LOG_DEBUG(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define  LOG_ERROR(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+#else
+
+#define  LOG_DEBUG(...)  printf(__VA_ARGS__)
+#define  LOG_ERROR(...)  perror(__VA_ARGS__)
+
+#endif
+
+static void all_tcp_pcb_free(struct all_tcp_pcb* es) {
   if (es != NULL) {
     if (es->sending) {
       /* free the buffer chain if present */
@@ -40,7 +54,7 @@ static void all_tcp_close_all(struct all_tcp_pcb* es) {
   tcp_recv(es->raw, NULL);
   tcp_err(es->raw, NULL);
   tcp_poll(es->raw, NULL, 0);
-  all_tcp_free(es);
+  all_tcp_pcb_free(es);
   tcp_close(es->raw);
 }
 
@@ -86,7 +100,7 @@ void all_tcp_send_buf(struct all_tcp_pcb* pcb, struct pbuf* buf) {
 static void all_tcp_error(void* arg, err_t err) {
   LWIP_UNUSED_ARG(err);
   struct all_tcp_pcb* es = arg;
-  all_tcp_free(es);
+  all_tcp_pcb_free(es);
 }
 
 static err_t all_tcp_poll(void* arg, struct tcp_pcb* pcb) {
@@ -129,6 +143,7 @@ static err_t all_tcp_recv(void* arg,
                           struct tcp_pcb* pcb,
                           struct pbuf* p,
                           err_t err) {
+  LOG_DEBUG("all_tcp_recv--->\n");
   err_t ret_err;
   struct all_tcp_pcb* es = arg;
   if (p == NULL) {
@@ -152,7 +167,6 @@ static err_t all_tcp_recv(void* arg,
     /* store reference to incoming pbuf (chain) */
     es->recving = p;
     ret_err = ERR_OK;
-    es->handler->accept(es->handler, es);
     es->handler->recv(es->handler, es);
   } else if (es->state == ES_RECEIVED) {
     /* read some more data */
@@ -193,6 +207,7 @@ static err_t all_tcp_accept(void* arg, struct tcp_pcb* newpcb, err_t recv_err) {
   tcp_err(newpcb, all_tcp_error);
   tcp_poll(newpcb, all_tcp_poll, 0);
   tcp_sent(newpcb, all_tcp_sent);
+  es->handler->accept(es->handler, es);
   return ERR_OK;
 }
 
@@ -212,4 +227,11 @@ err_t all_tcp_init(struct all_tcp_handler* handler) {
   tcp_arg(handler->listener, handler);
   tcp_accept(handler->listener, all_tcp_accept);
   return ERR_OK;
+}
+
+err_t all_tcp_free(struct all_tcp_handler* handler) {
+    err_t err = tcp_close(handler->listener);
+    tcp_shutdown(handler->listener,0,0);
+    handler->listener = 0;
+    return err;
 }

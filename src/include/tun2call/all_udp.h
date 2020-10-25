@@ -26,6 +26,7 @@ struct all_udp_handler {
 };
 
 err_t all_udp_init(struct all_udp_handler* handler);
+void all_udp_free(struct all_udp_handler* handler);
 err_t all_udp_poll(struct all_udp_handler* handler);
 err_t all_udp_sendto(struct all_udp_handler* handler,
                      const ip_addr_t* local_addr,

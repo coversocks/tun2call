@@ -27,6 +27,11 @@ err_t all_udp_init(struct all_udp_handler* handler) {
   return ERR_OK;
 }
 
+void all_udp_free(struct all_udp_handler* handler){
+  udp_remove(handler->listener);
+  handler->listener = 0;
+}
+
 err_t all_udp_poll(struct all_udp_handler* handler) {
   if (handler->poll) {
     handler->poll(handler, handler->listener);

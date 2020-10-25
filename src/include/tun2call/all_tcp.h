@@ -42,6 +42,7 @@ struct all_tcp_handler {
 };
 
 err_t all_tcp_init(struct all_tcp_handler* handler);
+err_t all_tcp_free(struct all_tcp_handler* handler);
 void all_tcp_close(struct all_tcp_pcb* pcb);
 void all_tcp_send(struct all_tcp_pcb* pcb);
 void all_tcp_send_buf(struct all_tcp_pcb* pcb, struct pbuf* buf);

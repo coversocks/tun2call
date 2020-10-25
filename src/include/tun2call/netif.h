@@ -27,6 +27,7 @@ struct netif_handler {
   netif_handler_init_fn init;
   netif_handler_read_fn read;
   netif_handler_write_fn write;
+  int enable_ipv6;
 };
 void netif_handler_set(struct netif_handler* handler,
                        u32_t ipaddr,
