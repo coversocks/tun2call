@@ -22,7 +22,7 @@
 #if __ANDROID__
 
 #include <android/log.h>
-#define  LOG_TAG    "coversocks"
+#define  LOG_TAG    "tun2call"
 #define  LOG_DEBUG(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define  LOG_ERROR(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
@@ -143,7 +143,6 @@ static err_t all_tcp_recv(void* arg,
                           struct tcp_pcb* pcb,
                           struct pbuf* p,
                           err_t err) {
-  LOG_DEBUG("all_tcp_recv--->\n");
   err_t ret_err;
   struct all_tcp_pcb* es = arg;
   if (p == NULL) {

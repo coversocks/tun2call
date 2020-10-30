@@ -16,7 +16,7 @@ typedef void (*all_udp_handler_recv_fn)(struct all_udp_handler* handler,
                                         const ip_addr_t* remote_addr,
                                         u16_t remote_port,
                                         struct pbuf* p);
-typedef void (*all_udp_handler_poll_fn)(struct all_udp_handler* handler,
+typedef int (*all_udp_handler_poll_fn)(struct all_udp_handler* handler,
                                         struct udp_pcb* pcb);
 struct all_udp_handler {
   void *user;
@@ -27,7 +27,7 @@ struct all_udp_handler {
 
 err_t all_udp_init(struct all_udp_handler* handler);
 void all_udp_free(struct all_udp_handler* handler);
-err_t all_udp_poll(struct all_udp_handler* handler);
+int all_udp_poll(struct all_udp_handler* handler);
 err_t all_udp_sendto(struct all_udp_handler* handler,
                      const ip_addr_t* local_addr,
                      u16_t local_port,

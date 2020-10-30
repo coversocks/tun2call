@@ -32,11 +32,11 @@ void all_udp_free(struct all_udp_handler* handler){
   handler->listener = 0;
 }
 
-err_t all_udp_poll(struct all_udp_handler* handler) {
+int all_udp_poll(struct all_udp_handler* handler) {
   if (handler->poll) {
-    handler->poll(handler, handler->listener);
+    return handler->poll(handler, handler->listener);
   }
-  return ERR_OK;
+  return 0;
 }
 
 static struct netif* all_udp_get_current_netif(struct udp_pcb* pcb,
