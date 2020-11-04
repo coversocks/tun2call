@@ -9,11 +9,9 @@ extern "C" {
 #include "lwip/pbuf.h"
 
 struct netif_handler;
-typedef void (*netif_handler_init_fn)(struct netif_handler *handler,
-                                      struct netif *netif);
+typedef void (*netif_handler_init_fn)(struct netif_handler *handler, struct netif *netif);
 typedef struct pbuf *(*netif_handler_read_fn)(struct netif_handler *handler);
-typedef ssize_t (*netif_handler_write_fn)(struct netif_handler *handler,
-                                          struct pbuf *p);
+typedef ssize_t (*netif_handler_write_fn)(struct netif_handler *handler, struct pbuf *p);
 
 struct netif_handler {
   void *user;
@@ -25,8 +23,7 @@ struct netif_handler {
   netif_handler_write_fn write;
   int enable_ipv6;
 };
-void netif_handler_set(struct netif_handler *handler, u32_t ipaddr,
-                       u32_t netmask, u32_t gw);
+void netif_handler_set(struct netif_handler *handler, u32_t ipaddr, u32_t netmask, u32_t gw);
 void netif_default_init(struct netif_handler *handler);
 void netif_default_poll();
 void netif_default_free();

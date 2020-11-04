@@ -22,18 +22,20 @@
 #if __ANDROID__
 
 #include <android/log.h>
-#define  LOG_TAG    "tun2call"
-#define  LOG_DEBUG(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define  LOG_ERROR(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#define LOG_TAG "tun2call"
+#define LOG_DEBUG(...) \
+  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+#define LOG_ERROR(...) \
+  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 #else
 
-#define  LOG_DEBUG(...)  printf(__VA_ARGS__)
-#define  LOG_ERROR(...)  perror(__VA_ARGS__)
+#define LOG_DEBUG(...) printf(__VA_ARGS__)
+#define LOG_ERROR(...) perror(__VA_ARGS__)
 
 #endif
 
-static void all_tcp_pcb_free(struct all_tcp_pcb* es) {
+static void all_tcp_pcb_free(struct all_tcp_pcb *es) {
   if (es != NULL) {
     if (es->sending) {
       /* free the buffer chain if present */
@@ -47,7 +49,7 @@ static void all_tcp_pcb_free(struct all_tcp_pcb* es) {
   }
 }
 
-static void all_tcp_close_all(struct all_tcp_pcb* es) {
+static void all_tcp_close_all(struct all_tcp_pcb *es) {
   es->handler->close(es->handler, es);
   tcp_arg(es->raw, NULL);
   tcp_sent(es->raw, NULL);
@@ -58,15 +60,13 @@ static void all_tcp_close_all(struct all_tcp_pcb* es) {
   tcp_close(es->raw);
 }
 
-void all_tcp_close(struct all_tcp_pcb* es) {
-  tcp_abort(es->raw);
-}
+void all_tcp_close(struct all_tcp_pcb *es) { tcp_abort(es->raw); }
 
-void all_tcp_send(struct all_tcp_pcb* es) {
-  struct pbuf* ptr;
+void all_tcp_send(struct all_tcp_pcb *es) {
+  struct pbuf *ptr;
   err_t wr_err = ERR_OK;
   while ((wr_err == ERR_OK) && (es->sending != NULL) &&
-         (es->sending->len <= tcp_sndbuf(es->raw))) {
+      (es->sending->len <= tcp_sndbuf(es->raw))) {
     ptr = es->sending;
     /* enqueue data for transmission */
     wr_err = tcp_write(es->raw, ptr->payload, ptr->len, 1);
@@ -88,7 +88,7 @@ void all_tcp_send(struct all_tcp_pcb* es) {
   }
 }
 
-void all_tcp_send_buf(struct all_tcp_pcb* pcb, struct pbuf* buf) {
+void all_tcp_send_buf(struct all_tcp_pcb *pcb, struct pbuf *buf) {
   if (pcb->sending) {
     pbuf_cat(pcb->sending, buf);
   } else {
@@ -97,15 +97,15 @@ void all_tcp_send_buf(struct all_tcp_pcb* pcb, struct pbuf* buf) {
   all_tcp_send(pcb);
 }
 
-static void all_tcp_error(void* arg, err_t err) {
+static void all_tcp_error(void *arg, err_t err) {
   LWIP_UNUSED_ARG(err);
-  struct all_tcp_pcb* es = arg;
+  struct all_tcp_pcb *es = arg;
   all_tcp_pcb_free(es);
 }
 
-static err_t all_tcp_poll(void* arg, struct tcp_pcb* pcb) {
+static err_t all_tcp_poll(void *arg, struct tcp_pcb *pcb) {
   err_t ret_err;
-  struct all_tcp_pcb* es = arg;
+  struct all_tcp_pcb *es = arg;
   if (es != NULL) {
     if (es->sending != NULL) {
       /* there is a remaining pbuf (chain)  */
@@ -127,9 +127,9 @@ static err_t all_tcp_poll(void* arg, struct tcp_pcb* pcb) {
   return ret_err;
 }
 
-static err_t all_tcp_sent(void* arg, struct tcp_pcb* pcb, u16_t len) {
+static err_t all_tcp_sent(void *arg, struct tcp_pcb *pcb, u16_t len) {
   LWIP_UNUSED_ARG(len);
-  struct all_tcp_pcb* es = arg;
+  struct all_tcp_pcb *es = arg;
   if (es->sending != NULL) {
     tcp_sent(pcb, all_tcp_sent);
     all_tcp_send(es);
@@ -139,12 +139,9 @@ static err_t all_tcp_sent(void* arg, struct tcp_pcb* pcb, u16_t len) {
   return ERR_OK;
 }
 
-static err_t all_tcp_recv(void* arg,
-                          struct tcp_pcb* pcb,
-                          struct pbuf* p,
-                          err_t err) {
+static err_t all_tcp_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err) {
   err_t ret_err;
-  struct all_tcp_pcb* es = arg;
+  struct all_tcp_pcb *es = arg;
   if (p == NULL) {
     /* remote host closed connection */
     es->state = ES_CLOSING;
@@ -185,32 +182,37 @@ static err_t all_tcp_recv(void* arg,
   return ret_err;
 }
 
-static err_t all_tcp_accept(void* arg, struct tcp_pcb* newpcb, err_t recv_err) {
-  if ((recv_err != ERR_OK) || (newpcb == NULL)) {
+static err_t all_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t recv_err) {
+  if ((recv_err != ERR_OK && recv_err != ERR_INPROGRESS) || (newpcb == NULL)) {
     return ERR_VAL;
   }
-  tcp_setprio(newpcb, TCP_PRIO_MIN);
-  struct all_tcp_pcb* es =
-      (struct all_tcp_pcb*)mem_malloc(sizeof(struct all_tcp_pcb));
-  if (es == NULL) {
-    return ERR_MEM;
+  struct all_tcp_pcb *es;
+  if (recv_err == ERR_INPROGRESS) {
+    es = (struct all_tcp_pcb *) mem_malloc(sizeof(struct all_tcp_pcb));
+    if (es == NULL) {
+      return ERR_MEM;
+    }
+    es->state = ES_ACCEPTING;
+    es->handler = arg;
+    es->raw = newpcb;
+    es->sending = NULL;
+    es->recving = NULL;
+    /* pass newly allocated es to our callbacks */
+    tcp_arg(newpcb, es);
+    tcp_setprio(newpcb, TCP_PRIO_MIN);
+    tcp_recv(newpcb, all_tcp_recv);
+    tcp_err(newpcb, all_tcp_error);
+    tcp_poll(newpcb, all_tcp_poll, 0);
+    tcp_sent(newpcb, all_tcp_sent);
+  } else {
+    es = newpcb->callback_arg;
+    es->state = ES_ACCEPTED;
   }
-  es->state = ES_ACCEPTED;
-  es->handler = arg;
-  es->raw = newpcb;
-  es->sending = NULL;
-  es->recving = NULL;
-  /* pass newly allocated es to our callbacks */
-  tcp_arg(newpcb, es);
-  tcp_recv(newpcb, all_tcp_recv);
-  tcp_err(newpcb, all_tcp_error);
-  tcp_poll(newpcb, all_tcp_poll, 0);
-  tcp_sent(newpcb, all_tcp_sent);
   es->handler->accept(es->handler, es);
   return ERR_OK;
 }
 
-err_t all_tcp_init(struct all_tcp_handler* handler) {
+err_t all_tcp_init(struct all_tcp_handler *handler) {
   handler->listener = tcp_new_ip_type(IPADDR_TYPE_ANY);
   if (handler->listener == NULL) {
     return ERR_MEM;
@@ -228,9 +230,9 @@ err_t all_tcp_init(struct all_tcp_handler* handler) {
   return ERR_OK;
 }
 
-err_t all_tcp_free(struct all_tcp_handler* handler) {
-    err_t err = tcp_close(handler->listener);
-    tcp_shutdown(handler->listener,0,0);
-    handler->listener = 0;
-    return err;
+err_t all_tcp_free(struct all_tcp_handler *handler) {
+  err_t err = tcp_close(handler->listener);
+  tcp_shutdown(handler->listener, 0, 0);
+  handler->listener = 0;
+  return err;
 }
