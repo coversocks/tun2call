@@ -19,6 +19,7 @@ enum all_tcp_states {
 };
 
 struct all_tcp_pcb {
+  void* user;
   u8_t state;
   struct tcp_pcb *raw;
   struct pbuf *recving;
