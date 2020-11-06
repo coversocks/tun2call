@@ -236,3 +236,9 @@ err_t all_tcp_free(struct all_tcp_handler *handler) {
   handler->listener = 0;
   return err;
 }
+
+void all_tcp_select(struct all_tcp_handler *handler){
+  if (handler->select) {
+    return handler->select(handler);
+  }
+}
