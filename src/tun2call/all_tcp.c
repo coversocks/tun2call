@@ -56,11 +56,14 @@ static void all_tcp_close_all(struct all_tcp_pcb *es) {
   tcp_recv(es->raw, NULL);
   tcp_err(es->raw, NULL);
   tcp_poll(es->raw, NULL, 0);
+  tcp_abort(es->raw);
   all_tcp_pcb_free(es);
-  tcp_close(es->raw);
 }
 
-void all_tcp_close(struct all_tcp_pcb *es) { tcp_abort(es->raw); }
+void all_tcp_close(struct all_tcp_pcb *es) {
+  tcp_close(es->raw);
+  es->state = ES_CLOSING;
+}
 
 void all_tcp_send(struct all_tcp_pcb *es) {
   struct pbuf *ptr;
@@ -183,31 +186,25 @@ static err_t all_tcp_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t 
 }
 
 static err_t all_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t recv_err) {
-  if ((recv_err != ERR_OK && recv_err != ERR_INPROGRESS) || (newpcb == NULL)) {
+  if (recv_err != ERR_OK || (newpcb == NULL)) {
     return ERR_VAL;
   }
-  struct all_tcp_pcb *es;
-  if (recv_err == ERR_INPROGRESS) {
-    es = (struct all_tcp_pcb *) mem_malloc(sizeof(struct all_tcp_pcb));
-    if (es == NULL) {
-      return ERR_MEM;
-    }
-    es->state = ES_ACCEPTING;
-    es->handler = arg;
-    es->raw = newpcb;
-    es->sending = NULL;
-    es->recving = NULL;
-    /* pass newly allocated es to our callbacks */
-    tcp_arg(newpcb, es);
-    tcp_setprio(newpcb, TCP_PRIO_MIN);
-    tcp_recv(newpcb, all_tcp_recv);
-    tcp_err(newpcb, all_tcp_error);
-    tcp_poll(newpcb, all_tcp_poll, 0);
-    tcp_sent(newpcb, all_tcp_sent);
-  } else {
-    es = newpcb->callback_arg;
-    es->state = ES_ACCEPTED;
+  struct all_tcp_pcb *es = (struct all_tcp_pcb *) mem_malloc(sizeof(struct all_tcp_pcb));
+  if (es == NULL) {
+    return ERR_MEM;
   }
+  es->state = ES_ACCEPTED;
+  es->handler = arg;
+  es->raw = newpcb;
+  es->sending = NULL;
+  es->recving = NULL;
+  /* pass newly allocated es to our callbacks */
+  tcp_arg(newpcb, es);
+  tcp_setprio(newpcb, TCP_PRIO_MIN);
+  tcp_recv(newpcb, all_tcp_recv);
+  tcp_err(newpcb, all_tcp_error);
+  tcp_poll(newpcb, all_tcp_poll, 0);
+  tcp_sent(newpcb, all_tcp_sent);
   es->handler->accept(es->handler, es);
   return ERR_OK;
 }
@@ -237,7 +234,7 @@ err_t all_tcp_free(struct all_tcp_handler *handler) {
   return err;
 }
 
-void all_tcp_select(struct all_tcp_handler *handler){
+void all_tcp_select(struct all_tcp_handler *handler) {
   if (handler->select) {
     return handler->select(handler);
   }

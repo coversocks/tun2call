@@ -12,7 +12,6 @@ struct all_tcp_handler;
 
 enum all_tcp_states {
   ES_NONE = 0,
-  ES_ACCEPTING,
   ES_ACCEPTED,
   ES_RECEIVED,
   ES_CLOSING
