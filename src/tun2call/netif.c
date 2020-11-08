@@ -21,22 +21,7 @@
 #include "lwip/udp.h"
 #include "netif/etharp.h"
 #include "netif/ethernet.h"
-
-#if __ANDROID__
-
-#include <android/log.h>
-#define LOG_TAG "coversocks"
-#define LOG_DEBUG(...) \
-  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOG_ERROR(...) \
-  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
-
-#else
-
-#define LOG_DEBUG(...) printf(__VA_ARGS__)
-#define LOG_ERROR(...) perror(__VA_ARGS__)
-
-#endif
+#include <stdlib.h>
 
 static err_t netif_default_output(struct netif *netif, struct pbuf *p) {
   struct netif_handler *handler = (struct netif_handler *)netif->state;

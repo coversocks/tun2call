@@ -20,6 +20,7 @@ enum all_tcp_states {
 struct all_tcp_pcb {
   void *user;
   u8_t state;
+  u8_t mark;
   struct tcp_pcb *raw;
   struct pbuf *recving;
   struct pbuf *sending;
@@ -28,11 +29,15 @@ struct all_tcp_pcb {
 
 typedef void (*all_tcp_select_fn)(struct all_tcp_handler *handler);
 
+typedef void (*all_tcp_send_fn)(struct all_tcp_handler *handler, struct all_tcp_pcb *pcb, u16_t n);
+
 typedef void (*all_tcp_recv_fn)(struct all_tcp_handler *handler, struct all_tcp_pcb *pcb);
 
 typedef void (*all_tcp_poll_fn)(struct all_tcp_handler *handler, struct all_tcp_pcb *pcb);
 
 typedef void (*all_tcp_close_fn)(struct all_tcp_handler *handler, struct all_tcp_pcb *pcb);
+
+typedef void (*all_tcp_error_fn)(struct all_tcp_handler *handler, struct all_tcp_pcb *pcb);
 
 typedef void (*all_tcp_accept_fn)(struct all_tcp_handler *handler, struct all_tcp_pcb *pcb);
 
@@ -41,9 +46,11 @@ struct all_tcp_handler {
   struct tcp_pcb *listener;
   all_tcp_accept_fn accept;
   all_tcp_select_fn select;
+  all_tcp_send_fn send;
   all_tcp_recv_fn recv;
   all_tcp_poll_fn poll;
   all_tcp_close_fn close;
+  all_tcp_error_fn error;
 };
 
 err_t all_tcp_init(struct all_tcp_handler *handler);

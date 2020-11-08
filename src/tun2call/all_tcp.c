@@ -18,34 +18,21 @@
 #include "lwip/timeouts.h"
 #include "lwip/udp.h"
 #include "netif/ethernet.h"
-
-#if __ANDROID__
-
-#include <android/log.h>
-#define LOG_TAG "tun2call"
-#define LOG_DEBUG(...) \
-  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOG_ERROR(...) \
-  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
-
-#else
-
-#define LOG_DEBUG(...) printf(__VA_ARGS__)
-#define LOG_ERROR(...) perror(__VA_ARGS__)
-
-#endif
+#include <stdlib.h>
 
 static void all_tcp_pcb_free(struct all_tcp_pcb *es) {
   if (es != NULL) {
     if (es->sending) {
       /* free the buffer chain if present */
       pbuf_free(es->sending);
+      es->sending = NULL;
     }
     if (es->recving) {
       /* free the buffer chain if present */
       pbuf_free(es->recving);
+      es->recving = NULL;
     }
-    mem_free(es);
+    free(es);
   }
 }
 
@@ -61,7 +48,6 @@ static void all_tcp_close_all(struct all_tcp_pcb *es) {
 }
 
 void all_tcp_close(struct all_tcp_pcb *es) {
-  tcp_close(es->raw);
   es->state = ES_CLOSING;
 }
 
@@ -74,14 +60,13 @@ void all_tcp_send(struct all_tcp_pcb *es) {
     /* enqueue data for transmission */
     wr_err = tcp_write(es->raw, ptr->payload, ptr->len, 1);
     if (wr_err == ERR_OK) {
-      u16_t plen;
-      plen = ptr->len;
       /* continue with next pbuf in chain (if any) */
       es->sending = ptr->next;
       if (es->sending != NULL) {
         /* new reference! */
         pbuf_ref(es->sending);
       }
+      es->handler->send(es->handler, es, ptr->len);
       /* chop first pbuf from chain */
       pbuf_free(ptr);
     } else if (wr_err == ERR_MEM) {
@@ -103,6 +88,7 @@ void all_tcp_send_buf(struct all_tcp_pcb *pcb, struct pbuf *buf) {
 static void all_tcp_error(void *arg, err_t err) {
   LWIP_UNUSED_ARG(err);
   struct all_tcp_pcb *es = arg;
+  es->handler->error(es->handler, es);
   all_tcp_pcb_free(es);
 }
 
@@ -164,6 +150,7 @@ static err_t all_tcp_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t 
     /* first data chunk in p->payload */
     es->state = ES_RECEIVED;
     /* store reference to incoming pbuf (chain) */
+    LWIP_ASSERT("es->recving==NULL", es->recving == NULL);
     es->recving = p;
     ret_err = ERR_OK;
     es->handler->recv(es->handler, es);
@@ -189,18 +176,17 @@ static err_t all_tcp_accept(void *arg, struct tcp_pcb *newpcb, err_t recv_err) {
   if (recv_err != ERR_OK || (newpcb == NULL)) {
     return ERR_VAL;
   }
-  struct all_tcp_pcb *es = (struct all_tcp_pcb *) mem_malloc(sizeof(struct all_tcp_pcb));
-  if (es == NULL) {
-    return ERR_MEM;
-  }
+  struct all_tcp_pcb *es = (struct all_tcp_pcb *) malloc(sizeof(struct all_tcp_pcb));
+  es->user = NULL;
   es->state = ES_ACCEPTED;
+  es->mark = 0;
   es->handler = arg;
   es->raw = newpcb;
   es->sending = NULL;
   es->recving = NULL;
   /* pass newly allocated es to our callbacks */
   tcp_arg(newpcb, es);
-  tcp_setprio(newpcb, TCP_PRIO_MIN);
+  tcp_setprio(newpcb, TCP_PRIO_NORMAL);
   tcp_recv(newpcb, all_tcp_recv);
   tcp_err(newpcb, all_tcp_error);
   tcp_poll(newpcb, all_tcp_poll, 0);
