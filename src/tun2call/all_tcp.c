@@ -54,8 +54,7 @@ void all_tcp_close(struct all_tcp_pcb *es) {
 void all_tcp_send(struct all_tcp_pcb *es) {
   struct pbuf *ptr;
   err_t wr_err = ERR_OK;
-  while ((wr_err == ERR_OK) && (es->sending != NULL) &&
-      (es->sending->len <= tcp_sndbuf(es->raw))) {
+  while ((wr_err == ERR_OK) && (es->sending != NULL) && (es->sending->len <= tcp_sndbuf(es->raw))) {
     ptr = es->sending;
     /* enqueue data for transmission */
     wr_err = tcp_write(es->raw, ptr->payload, ptr->len, 1);
